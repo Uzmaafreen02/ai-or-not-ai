@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI OR NOT AI? — Teacher Dashboard</title>
+<style>
+  :root{
+    --bg: #F6F1E4;
+    --surface: #FFFFFF;
+    --ink: #182A2E;
+    --ink-soft: #5B6B6D;
+    --teal: #0E8A7C;
+    --teal-dark: #0B6D62;
+    --amber: #F5A623;
+    --amber-dark: #C97F0E;
+    --border: #E4D9BB;
+    --good: #3FB68C;
+    --bad: #E0575B;
+    --font-display: 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif;
+    --font-body: Arial, Helvetica, sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-body); padding: 28px 20px 60px;
+  }
+  h1{ font-family: var(--font-display); font-size: clamp(24px,4vw,34px); margin: 0 0 2px; }
+  .subtitle{ color: var(--ink-soft); margin: 0 0 22px; font-size:15px; }
+
+  .panel{
+    background: var(--surface); border:1px solid var(--border); border-radius:18px;
+    padding: 20px 22px; margin-bottom: 20px; max-width: 1100px;
+  }
+  .panel h2{ font-family: var(--font-display); font-size:18px; margin:0 0 14px; }
+  .setup-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  @media (max-width:700px){ .setup-grid{ grid-template-columns: 1fr; } }
+  .field label{ display:block; font-size:13px; font-weight:bold; color:var(--ink-soft); margin-bottom:6px; }
+  .field input{
+    width:100%; padding:11px 13px; border-radius:10px; border:2px solid var(--border);
+    font-size:15px; background:#fff; color:var(--ink);
+  }
+  .field input:focus{ outline:none; border-color: var(--teal); }
+
+  .btn{
+    font-family: var(--font-body); font-weight:bold; font-size:14px;
+    padding: 11px 18px; border-radius: 10px; border: none; cursor:pointer;
+  }
+  .btn-primary{ background: var(--teal); color:#fff; }
+  .btn-primary:hover{ background: var(--teal-dark); }
+  .btn-secondary{ background:#fff; border:2px solid var(--border); color:var(--ink); }
+  .btn-secondary:hover{ border-color: var(--teal); }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+
+  .toolbar{
+    display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:16px; max-width:1100px;
+  }
+  .toolbar .field{ min-width:170px; flex:1; }
+  .toolbar select{
+    width:100%; padding:11px 13px; border-radius:10px; border:2px solid var(--border);
+    font-size:14px; background:#fff; color:var(--ink);
+  }
+  .toolbar-actions{ display:flex; gap:10px; margin-left:auto; flex-wrap:wrap; }
+  .auto-refresh{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-soft); white-space:nowrap; padding-bottom:11px; }
+
+  .status-line{ font-size:14px; color: var(--ink-soft); margin-bottom:14px; max-width:1100px; }
+  .status-line.error{ color: var(--bad); font-weight:bold; }
+  .status-line.ok{ color: var(--good); font-weight:bold; }
+
+  .table-wrap{
+    background: var(--surface); border:1px solid var(--border); border-radius:18px;
+    overflow:auto; max-width:1100px;
+  }
+  table{ width:100%; border-collapse: collapse; font-size:14px; min-width:820px; }
+  th, td{ padding: 11px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th{
+    background: #FBF7EC; color: var(--ink-soft); font-size:12px; letter-spacing:0.2px;
+    cursor:pointer; user-select:none; position:sticky; top:0;
+  }
+  thead th:hover{ color: var(--teal-dark); }
+  thead th.sorted::after{ content: attr(data-arrow); margin-left:6px; }
+  tbody tr:hover{ background: #FBF7EC; }
+  .empty-state{ padding: 40px 20px; text-align:center; color: var(--ink-soft); }
+
+  .summary-strip{ display:flex; gap:22px; flex-wrap:wrap; margin-bottom:16px; max-width:1100px; }
+  .summary-chip{
+    background: var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding: 12px 18px; min-width:130px;
+  }
+  .summary-chip .num{ font-family: var(--font-display); font-size:24px; font-weight:bold; color: var(--teal-dark); }
+  .summary-chip .label{ font-size:12px; color: var(--ink-soft); }
+
+  @media print{
+    .panel, .toolbar, .summary-strip, body > .subtitle{ display:none !important; }
+    body{ padding: 0; background:#fff; }
+    .table-wrap{ border:none; max-width:none; }
+    thead th{ position:static; }
+    #printMeta{ display:block !important; margin-bottom:12px; color:#333; font-size:13px; }
+  }
+  #printMeta{ display:none; }
+</style>
+</head>
+<body>
+
+<h1>🤖 AI OR NOT AI? — Teacher Dashboard</h1>
+<p class="subtitle">Central results from every computer in the lab, read live from your Google Sheet.</p>
+
+<div class="panel" id="setupPanel">
+  <h2>Connection setup</h2>
+  <div class="setup-grid">
+    <div class="field">
+      <label for="gasUrl">Google Apps Script Web App URL</label>
+      <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="field">
+      <label for="classKey">Class Key</label>
+      <input type="password" id="classKey" placeholder="Same key used in the student game">
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="saveConfigBtn">Save &amp; Load Results</button>
+    <span style="font-size:12px;color:var(--ink-soft);align-self:center;">Saved only on this computer, for your convenience — never sent anywhere else.</span>
+  </div>
+</div>
+
+<div id="printMeta"></div>
+
+<div class="summary-strip" id="summaryStrip" style="display:none;">
+  <div class="summary-chip"><div class="num" id="chipTotal">0</div><div class="label">Submissions</div></div>
+  <div class="summary-chip"><div class="num" id="chipAvg">0</div><div class="label">Average score</div></div>
+  <div class="summary-chip"><div class="num" id="chipClasses">0</div><div class="label">Classes represented</div></div>
+</div>
+
+<div class="toolbar" id="toolbar" style="display:none;">
+  <div class="field">
+    <label for="searchInput">Search name</label>
+    <input type="text" id="searchInput" placeholder="Type a student's name">
+  </div>
+  <div class="field">
+    <label for="classFilter">Class</label>
+    <select id="classFilter"><option value="">All</option></select>
+  </div>
+  <div class="field">
+    <label for="sectionFilter">Section</label>
+    <select id="sectionFilter"><option value="">All</option></select>
+  </div>
+  <div class="auto-refresh">
+    <input type="checkbox" id="autoRefreshToggle">
+    <label for="autoRefreshToggle">Auto-refresh every 20s</label>
+  </div>
+  <div class="toolbar-actions">
+    <button class="btn btn-secondary" id="refreshBtn">🔄 Refresh</button>
+    <button class="btn btn-secondary" id="csvBtn">⬇ Download CSV</button>
+    <button class="btn btn-secondary" id="printBtn">🖨 Print</button>
+  </div>
+</div>
+
+<p class="status-line" id="statusLine"></p>
+
+<div class="table-wrap" id="tableWrap" style="display:none;">
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th data-key="Student Name">Student Name</th>
+        <th data-key="Class">Class</th>
+        <th data-key="Section">Section</th>
+        <th data-key="Score">Score</th>
+        <th data-key="Correct Answers">Correct</th>
+        <th data-key="Wrong Attempts">Wrong Attempts</th>
+        <th data-key="Time Taken">Time Taken</th>
+        <th data-key="Date">Date</th>
+        <th data-key="Server Timestamp">Server Timestamp</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CONFIG_KEY = "aiOrNotAi_dashboard_config_v1";
+  var allRows = [];
+  var sortState = { key: "Server Timestamp", dir: "desc" };
+  var autoRefreshTimer = null;
+
+  function loadConfig(){
+    try{
+      var raw = localStorage.getItem(CONFIG_KEY);
+      return raw ? JSON.parse(raw) : { url: "", key: "" };
+    }catch(e){ return { url: "", key: "" }; }
+  }
+
+  function saveConfig(cfg){
+    try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }catch(e){ /* ignore */ }
+  }
+
+  // Prefill from any previously saved config on this computer.
+  var savedConfig = loadConfig();
+  document.getElementById("gasUrl").value = savedConfig.url || "";
+  document.getElementById("classKey").value = savedConfig.key || "";
+
+  function setStatus(text, kind){
+    var el = document.getElementById("statusLine");
+    el.textContent = text;
+    el.className = "status-line" + (kind ? (" " + kind) : "");
+  }
+
+  function currentConfig(){
+    return {
+      url: document.getElementById("gasUrl").value.trim(),
+      key: document.getElementById("classKey").value.trim()
+    };
+  }
+
+  function fetchResults(){
+    var cfg = currentConfig();
+    if (!cfg.url || !cfg.key){
+      setStatus("Enter the Web App URL and class key above, then click \"Save & Load Results\".", "error");
+      return;
+    }
+    setStatus("Loading results…");
+    var sep = cfg.url.indexOf("?") === -1 ? "?" : "&";
+    fetch(cfg.url + sep + "key=" + encodeURIComponent(cfg.key))
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        if (!json || json.status !== "ok"){
+          setStatus("Could not load results: " + (json && json.message ? json.message : "unknown error"), "error");
+          return;
+        }
+        allRows = json.results || [];
+        setStatus("Loaded " + allRows.length + " result(s). Last refreshed " + new Date().toLocaleTimeString() + ".", "ok");
+        document.getElementById("summaryStrip").style.display = "flex";
+        document.getElementById("toolbar").style.display = "flex";
+        document.getElementById("tableWrap").style.display = "block";
+        populateFilterOptions();
+        renderTable();
+      })
+      .catch(function(err){
+        setStatus("Network error — could not reach the Web App. Check your internet connection and the URL. (" + err.message + ")", "error");
+      });
+  }
+
+  document.getElementById("saveConfigBtn").addEventListener("click", function(){
+    var cfg = currentConfig();
+    saveConfig(cfg);
+    fetchResults();
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", fetchResults);
+
+  document.getElementById("autoRefreshToggle").addEventListener("change", function(){
+    if (this.checked){
+      autoRefreshTimer = setInterval(fetchResults, 20000);
+    } else if (autoRefreshTimer){
+      clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+    }
+  });
+
+  function populateFilterOptions(){
+    fillSelect("classFilter", uniqueValues("Class"));
+    fillSelect("sectionFilter", uniqueValues("Section"));
+  }
+
+  function uniqueValues(key){
+    var set = {};
+    allRows.forEach(function(r){ if (r[key]) set[r[key]] = true; });
+    return Object.keys(set).sort();
+  }
+
+  function fillSelect(id, values){
+    var sel = document.getElementById(id);
+    var current = sel.value;
+    sel.innerHTML = '<option value="">All</option>';
+    values.forEach(function(v){
+      var opt = document.createElement("option");
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    });
+    if (values.indexOf(current) !== -1) sel.value = current;
+  }
+
+  document.getElementById("searchInput").addEventListener("input", renderTable);
+  document.getElementById("classFilter").addEventListener("change", renderTable);
+  document.getElementById("sectionFilter").addEventListener("change", renderTable);
+
+  document.querySelectorAll("#resultsTable thead th").forEach(function(th){
+    th.addEventListener("click", function(){
+      var key = th.getAttribute("data-key");
+      if (sortState.key === key){
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState.key = key; sortState.dir = "asc";
+      }
+      renderTable();
+    });
+  });
+
+  function getFilteredSortedRows(){
+    var search = document.getElementById("searchInput").value.trim().toLowerCase();
+    var cls = document.getElementById("classFilter").value;
+    var section = document.getElementById("sectionFilter").value;
+
+    var rows = allRows.filter(function(r){
+      var nameMatch = !search || String(r["Student Name"] || "").toLowerCase().indexOf(search) !== -1;
+      var clsMatch = !cls || r["Class"] === cls;
+      var secMatch = !section || r["Section"] === section;
+      return nameMatch && clsMatch && secMatch;
+    });
+
+    rows.sort(function(a,b){
+      var av = a[sortState.key], bv = b[sortState.key];
+      var an = parseFloat(av), bn = parseFloat(bv);
+      var bothNumeric = av !== "" && bv !== "" && !isNaN(an) && !isNaN(bn);
+      var cmp = bothNumeric ? (an - bn) : String(av || "").localeCompare(String(bv || ""));
+      return sortState.dir === "asc" ? cmp : -cmp;
+    });
+
+    return rows;
+  }
+
+  function renderTable(){
+    var rows = getFilteredSortedRows();
+    var body = document.getElementById("resultsBody");
+
+    document.querySelectorAll("#resultsTable thead th").forEach(function(th){
+      th.classList.remove("sorted");
+      th.removeAttribute("data-arrow");
+    });
+    var activeTh = document.querySelector('#resultsTable thead th[data-key="' + sortState.key + '"]');
+    if (activeTh){
+      activeTh.classList.add("sorted");
+      activeTh.setAttribute("data-arrow", sortState.dir === "asc" ? "▲" : "▼");
+    }
+
+    if (rows.length === 0){
+      body.innerHTML = '<tr><td colspan="9" class="empty-state">No results match the current filters.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(r){
+        return "<tr>" +
+          "<td>" + escapeHtml(r["Student Name"]) + "</td>" +
+          "<td>" + escapeHtml(r["Class"]) + "</td>" +
+          "<td>" + escapeHtml(r["Section"]) + "</td>" +
+          "<td>" + escapeHtml(r["Score"]) + " / " + escapeHtml(r["Total Marks"]) + "</td>" +
+          "<td>" + escapeHtml(r["Correct Answers"]) + "</td>" +
+          "<td>" + escapeHtml(r["Wrong Attempts"]) + "</td>" +
+          "<td>" + escapeHtml(r["Time Taken"]) + "</td>" +
+          "<td>" + escapeHtml(r["Date"]) + "</td>" +
+          "<td>" + escapeHtml(r["Server Timestamp"]) + "</td>" +
+          "</tr>";
+      }).join("");
+    }
+
+    updateSummary(rows);
+  }
+
+  function updateSummary(rows){
+    document.getElementById("chipTotal").textContent = rows.length;
+    var avg = 0;
+    if (rows.length > 0){
+      var sum = rows.reduce(function(acc,r){ return acc + (parseFloat(r["Score"]) || 0); }, 0);
+      avg = (sum / rows.length).toFixed(1);
+    }
+    document.getElementById("chipAvg").textContent = avg;
+    var classes = {};
+    rows.forEach(function(r){ if (r["Class"]) classes[r["Class"]] = true; });
+    document.getElementById("chipClasses").textContent = Object.keys(classes).length;
+  }
+
+  function escapeHtml(str){
+    return String(str == null ? "" : str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  document.getElementById("csvBtn").addEventListener("click", function(){
+    var rows = getFilteredSortedRows();
+    if (rows.length === 0){ window.alert("There are no results to export with the current filters."); return; }
+    var headers = ["Student Name","Class","Section","Score","Total Marks","Correct Answers","Wrong Attempts","Time Taken","Date","Server Timestamp"];
+    var csvRows = [headers];
+    rows.forEach(function(r){
+      csvRows.push(headers.map(function(h){ return r[h]; }));
+    });
+    var csv = csvRows.map(function(row){
+      return row.map(function(cell){
+        var val = String(cell == null ? "" : cell).replace(/"/g,'""');
+        return '"' + val + '"';
+      }).join(",");
+    }).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "ai_or_not_ai_class_results.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("printBtn").addEventListener("click", function(){
+    document.getElementById("printMeta").textContent =
+      "AI OR NOT AI? — Class Results — Printed " + new Date().toLocaleString();
+    window.print();
+  });
+
+  // Auto-load if a config was already saved on this computer from a previous visit.
+  if (savedConfig.url && savedConfig.key){
+    fetchResults();
+  }
+})();
+</script>
+</body>
+</html>
