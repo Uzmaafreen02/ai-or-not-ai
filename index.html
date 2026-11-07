@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI OR NOT AI?</title>
+<style>
+  :root{
+    --bg-deep: #0E2A32;
+    --bg-deep-2: #103138;
+    --paper: #FFF8EC;
+    --paper-edge: #F0E4C8;
+    --ink: #182A2E;
+    --ink-soft: #4A5A5C;
+    --cream: #F4EFE6;
+    --teal: #17B8A6;
+    --teal-dark: #0E8A7C;
+    --amber: #F5A623;
+    --amber-dark: #C97F0E;
+    --good: #3FB68C;
+    --bad: #E0575B;
+    --focus: #FFD873;
+    --font-display: 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif;
+    --font-body: Arial, Helvetica, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: var(--font-body);
+    background: radial-gradient(circle at 20% 0%, var(--bg-deep-2), var(--bg-deep) 70%);
+    color: var(--cream);
+    overflow-x:hidden;
+    min-height:100vh;
+  }
+  button{ font-family:inherit; cursor:pointer; }
+  button:focus-visible, .icon-btn:focus-visible, input:focus-visible{
+    outline: 4px solid var(--focus);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  .screen{
+    min-height:100vh;
+    width:100%;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 24px 16px 40px;
+    position:relative;
+  }
+  .screen.active{ display:flex; }
+
+  /* ---------- top bar controls (mute + teacher) ---------- */
+  .top-controls{
+    position:fixed;
+    top:14px; right:14px;
+    display:flex; gap:10px;
+    z-index:50;
+  }
+  .icon-btn{
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.25);
+    color: var(--cream);
+    border-radius: 999px;
+    width:52px; height:52px;
+    font-size:22px;
+    display:flex; align-items:center; justify-content:center;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .icon-btn:hover{ transform: scale(1.08); background: rgba(255,255,255,0.16); }
+  .icon-btn:active{ transform: scale(0.95); }
+
+  /* ---------- circuit doodle background accent ---------- */
+  .doodle{
+    position:absolute; inset:0; pointer-events:none; opacity:0.10;
+    background-image:
+      radial-gradient(circle, var(--teal) 2px, transparent 2.5px);
+    background-size: 46px 46px;
+  }
+
+  /* ---------- START SCREEN ---------- */
+  .brand-mark{
+    display:flex; align-items:center; gap:14px; margin-bottom:8px;
+  }
+  .brand-bot{
+    font-size:56px;
+    animation: bob 3s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform: translateY(0) rotate(-2deg);} 50%{ transform: translateY(-10px) rotate(2deg);} }
+  h1.title{
+    font-family: var(--font-display);
+    font-size: clamp(38px, 7vw, 68px);
+    margin: 6px 0 2px;
+    letter-spacing: 1px;
+    text-align:center;
+    color: var(--cream);
+  }
+  h1.title span{ color: var(--teal); }
+  .subtitle{
+    font-family: var(--font-display);
+    font-size: clamp(18px, 3vw, 26px);
+    color: var(--amber);
+    margin: 0 0 30px;
+    text-align:center;
+  }
+  .start-actions{ display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .btn-primary{
+    background: linear-gradient(180deg, var(--teal), var(--teal-dark));
+    color: #05201C;
+    font-family: var(--font-display);
+    font-weight:bold;
+    font-size: clamp(22px,3.4vw,30px);
+    padding: 20px 56px;
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 8px 0 var(--teal-dark), 0 14px 20px rgba(0,0,0,0.35);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn-primary:hover{ transform: translateY(-2px); }
+  .btn-primary:active{ transform: translateY(4px); box-shadow: 0 4px 0 var(--teal-dark), 0 6px 10px rgba(0,0,0,0.3); }
+
+  .hear-instructions{
+    display:flex; align-items:center; gap:10px;
+    background:none; border: 2px solid rgba(255,255,255,0.3);
+    color: var(--cream); padding: 10px 22px; border-radius: 999px;
+    font-size:16px;
+  }
+  .hear-instructions:hover{ background: rgba(255,255,255,0.08); }
+
+  .teacher-link{
+    position:fixed; left:14px; bottom:14px;
+    background:none; border:none; color: rgba(244,239,230,0.55);
+    font-size:14px; text-decoration:underline;
+  }
+
+  /* ---------- STUDENT INFO SCREEN ---------- */
+  .card{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 26px;
+    padding: 36px 32px;
+    width: min(520px, 92vw);
+    box-shadow: 0 20px 0 var(--paper-edge), 0 26px 40px rgba(0,0,0,0.45);
+    text-align:center;
+  }
+  .card h2{
+    font-family: var(--font-display);
+    font-size: clamp(24px,4vw,32px);
+    margin:0 0 22px;
+  }
+  .field{ text-align:left; margin-bottom:18px; }
+  .field label{
+    display:block; font-weight:bold; margin-bottom:6px; font-size:15px; color: var(--ink-soft);
+  }
+  .field input, .field select{
+    width:100%; padding:14px 16px; font-size:18px;
+    border-radius:14px; border:2px solid #DCCFA8;
+    background:#fff; color:var(--ink);
+  }
+  .field input:focus, .field select:focus{ border-color: var(--teal); }
+
+  /* ---------- INSTRUCTIONS SCREEN ---------- */
+  .instr-steps{
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    font-size: clamp(44px, 8vw, 72px);
+    margin: 26px 0 34px;
+  }
+  .instr-steps .arrow{ font-size: clamp(24px,4vw,36px); color: var(--amber); }
+  .instr-line{
+    font-family: var(--font-display);
+    font-size: clamp(18px,3vw,24px);
+    text-align:center; max-width: 520px; margin-bottom: 28px;
+    color: var(--cream);
+  }
+
+  /* ---------- QUESTION SCREEN ---------- */
+  .progress-wrap{
+    width:min(640px,92vw); margin-bottom: 18px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .progress-track{
+    flex:1; height:16px; background: rgba(255,255,255,0.12); border-radius:999px; overflow:hidden;
+  }
+  .progress-fill{
+    height:100%; background: linear-gradient(90deg, var(--teal), var(--amber));
+    border-radius:999px; transition: width .35s ease;
+  }
+  .progress-label{
+    font-family: var(--font-display); font-weight:bold; font-size:18px; white-space:nowrap;
+  }
+
+  .scene-card{
+    background: var(--paper);
+    border-radius: 28px;
+    width: min(640px, 94vw);
+    min-height: 300px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 30px 20px;
+    box-shadow: 0 18px 0 var(--paper-edge), 0 24px 36px rgba(0,0,0,0.4);
+    position:relative;
+    margin-bottom: 22px;
+  }
+  .scene-visual {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .scene-image {
+      display: block;
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      max-height: 42vh;
+      object-fit: contain;
+      margin: 0 auto;
+      border-radius: 16px;
+  }
+  .scene-caption{
+    font-family: var(--font-display);
+    color: var(--ink-soft);
+    font-size: clamp(16px,2.6vw,20px);
+    margin-top: 16px;
+    text-align:center;
+  }
+  .speak-btn{
+    position:absolute; top:16px; right:16px;
+    background: var(--amber); color:#3A2500; border:none;
+    width:54px; height:54px; border-radius:999px; font-size:24px;
+    box-shadow: 0 4px 0 var(--amber-dark);
+  }
+  .speak-btn:active{ transform: translateY(3px); box-shadow:none; }
+
+  .answer-row{
+    display:flex; gap:22px; width:min(640px,94vw); flex-wrap:wrap; justify-content:center;
+  }
+  .answer-btn{
+    flex:1; min-width:220px;
+    font-family: var(--font-display); font-weight:bold;
+    font-size: clamp(24px,4vw,34px);
+    padding: 30px 20px;
+    border-radius: 22px;
+    border: none;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    transition: transform .1s ease;
+  }
+  .answer-btn:active{ transform: scale(0.96); }
+  .answer-btn .emo{ font-size: 1.5em; }
+  .btn-ai{ background: linear-gradient(180deg, var(--teal), var(--teal-dark)); color:#052A24; box-shadow: 0 8px 0 var(--teal-dark); }
+  .btn-notai{ background: linear-gradient(180deg, var(--amber), var(--amber-dark)); color:#3A2500; box-shadow: 0 8px 0 var(--amber-dark); }
+
+  .feedback-banner{
+    position:fixed; top:0; left:0; right:0;
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    padding: 22px; font-family: var(--font-display); font-weight:bold;
+    font-size: clamp(24px,4vw,34px);
+    transform: translateY(-120%);
+    transition: transform .25s ease;
+    z-index: 60;
+  }
+  .feedback-banner.show{ transform: translateY(0); }
+  .feedback-banner.good{ background: var(--good); color:#05261A; }
+  .feedback-banner.bad{ background: var(--bad); color:#340606; }
+
+  /* ---------- SCORE SCREEN ---------- */
+  .score-card{
+    background: var(--paper); color:var(--ink); border-radius:30px;
+    padding: 40px 36px; width:min(560px,92vw); text-align:center;
+    box-shadow: 0 20px 0 var(--paper-edge), 0 26px 40px rgba(0,0,0,0.45);
+  }
+  .score-card h2{ font-family:var(--font-display); font-size:22px; letter-spacing:2px; color:var(--ink-soft); margin:0; }
+  .score-big{
+    font-family: var(--font-display); font-weight:bold;
+    font-size: clamp(56px, 12vw, 90px);
+    margin: 6px 0 6px;
+    color: var(--teal-dark);
+  }
+  .stars{ font-size: clamp(30px,6vw,44px); margin: 10px 0 18px; letter-spacing:6px; }
+  .score-sub{ color: var(--ink-soft); font-size:16px; margin-bottom: 10px; }
+  .upload-status{ margin-bottom: 14px; min-height: 30px; }
+  .upload-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:7px 16px; border-radius:999px; font-weight:bold; font-size:13px;
+  }
+  .upload-pill.sending{ background:#EFEAD9; color:#6B5B2A; }
+  .upload-pill.ok{ background:#E3F6EF; color:#0E6B57; }
+  .upload-pill.fail{ background:#FCE8E8; color:#A32E2E; }
+  .btn-retry{
+    background:none; border:2px solid var(--bad); color:var(--bad);
+    padding:9px 18px; border-radius:12px; font-size:14px; font-weight:bold;
+    margin-bottom: 22px;
+  }
+  .score-actions{ display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+  .btn-secondary{
+    background:#fff; border:2px solid #DCCFA8; color:var(--ink);
+    padding:16px 26px; border-radius:16px; font-weight:bold; font-size:17px;
+  }
+
+  /* ---------- CONFETTI ---------- */
+  .confetti-piece{
+    position:fixed; top:-20px; width:10px; height:16px; opacity:0.9;
+    z-index: 5; border-radius:2px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall{
+    to{ transform: translateY(110vh) rotate(540deg); opacity:0.4; }
+  }
+
+  /* ---------- TEACHER / ADMIN ---------- */
+  .admin-panel{
+    background: var(--paper); color:var(--ink); border-radius:24px;
+    width:min(880px,94vw); padding: 28px 26px; max-height:82vh; overflow:auto;
+    box-shadow: 0 20px 0 var(--paper-edge), 0 26px 40px rgba(0,0,0,0.45);
+  }
+  .admin-panel h2{ font-family:var(--font-display); margin-top:0; }
+  table.results-table{ width:100%; border-collapse: collapse; margin-top:14px; font-size:15px; }
+  table.results-table th, table.results-table td{
+    border-bottom: 1px solid #E7DAB6; padding:10px 8px; text-align:left;
+  }
+  table.results-table th{ color:var(--ink-soft); font-size:13px; text-transform:none; }
+  .admin-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:20px; }
+  .btn-danger{ background:#fff; border:2px solid var(--bad); color:var(--bad); padding:12px 20px; border-radius:14px; font-weight:bold; }
+  .btn-back{ margin-top: 18px; }
+  .empty-note{ color: var(--ink-soft); margin-top:14px; }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  /* =========================================
+   RESPONSIVE IMAGE + SCREEN FIT
+   ========================================= */
+
+  .scene-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 520px;
+      max-height: 42vh;
+      object-fit: contain;
+      margin: 0 auto;
+      border-radius: 16px;
+  }
+
+  /* Prevent the game from becoming too large */
+  body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+  }
+
+  /* Tablet / smaller laptop */
+  @media (max-width: 900px) {
+
+      .scene-image {
+          max-width: 420px;
+          max-height: 38vh;
+      }
+  }
+
+  /* Small screens */
+  @media (max-width: 600px) {
+
+      .scene-image {
+          max-width: 90%;
+          max-height: 32vh;
+      }
+  }
+
+  /* Short laptop screens */
+  @media (max-height: 700px) {
+
+      .scene-image {
+          max-height: 30vh;
+      }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-controls">
+  <button class="icon-btn" id="muteBtn" aria-label="Mute audio" title="Mute / unmute audio">🔊</button>
+</div>
+
+<!-- START SCREEN -->
+<section class="screen active" id="screen-start">
+  <div class="doodle"></div>
+  <div class="brand-mark">
+    <span class="brand-bot" aria-hidden="true">🤖</span>
+  </div>
+  <h1 class="title">AI <span>OR</span> NOT AI?</h1>
+  <p class="subtitle">Can you find AI?</p>
+  <div class="start-actions">
+    <button class="btn-primary" id="startBtn">▶ START</button>
+    <button class="hear-instructions" id="hearBtn">🔊 Hear how to play</button>
+  </div>
+</section>
+
+<!-- INSTRUCTIONS SCREEN -->
+<section class="screen" id="screen-instructions">
+  <h2 class="title" style="font-size:clamp(26px,5vw,40px);">How to play</h2>
+  <div class="instr-steps" aria-hidden="true">
+    <span>👀</span><span class="arrow">→</span><span>🖼️</span><span class="arrow">→</span><span>🤖</span><span style="font-size:0.6em;">/</span><span>❌</span>
+  </div>
+  <p class="instr-line">Look at the picture. Think carefully. Is AI being used? Click AI or NOT AI.</p>
+  <button class="btn-primary" id="beginQuizBtn">Let's Begin</button>
+</section>
+
+<!-- QUESTION SCREEN -->
+<section class="screen" id="screen-question">
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">1/15</div>
+  </div>
+  <div class="scene-card">
+    <button class="speak-btn" id="speakQBtn" aria-label="Play question audio">🔊</button>
+    <div class="scene-visual" id="sceneVisual"></div>
+    <div class="scene-caption" id="sceneCaption"></div>
+  </div>
+  <div class="answer-row">
+    <button class="answer-btn btn-ai" id="btnAI"><span class="emo">🤖</span>AI</button>
+    <button class="answer-btn btn-notai" id="btnNotAI"><span class="emo">❌</span>NOT AI</button>
+  </div>
+</section>
+
+<!-- FEEDBACK BANNER (floats above question screen) -->
+<div class="feedback-banner" id="feedbackBanner"></div>
+
+<!-- SCORE SCREEN -->
+<section class="screen" id="screen-score">
+  <div class="score-card">
+    <h2>YOUR SCORE</h2>
+    <div class="score-big" id="scoreBig">0 / 15</div>
+    <div class="stars" id="scoreStars">⭐⭐⭐⭐⭐</div>
+    <div class="score-sub" id="scoreSub"></div>
+    <div class="score-actions">
+      <button class="btn-primary" id="playAgainBtn">Play Again</button>
+      <button class="btn-secondary" id="exitBtn">Exit</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- DATA ---------------- */
+  // Each question: a CSS/emoji built "scene", a short caption (decorative, not required reading),
+  // and the correct answer. Order is mixed so obvious and tricky items alternate.
+  var QUESTIONS = [
+  { image: "q1.png", caption: "A wall clock showing the time", answer: "not_ai" },
+
+  { image: "q2.png", caption: "A torch switched on by hand", answer: "not_ai" },
+
+  { image: "q3.jpg", caption: "A phone unlocking by looking at a face", answer: "ai" },
+
+  { image: "q4.jpg", caption: "A chatbot answering a question", answer: "ai" },
+
+  { image: "q5.png", caption: "A calculator solving 5 + 5", answer: "not_ai" },
+
+  { image: "q6.png", caption: "An app translating one language to another", answer: "ai" },
+
+  { image: "q7.png", caption: "A light bulb switched on with a switch", answer: "not_ai" },
+
+  { image: "q8.png", caption: "A pencil used to write", answer: "not_ai" },
+
+  { image: "q9.jpg", caption: "A video app suggesting what to watch next", answer: "ai" },
+
+  { image: "q10.jpg", caption: "A camera recognising a person's face", answer: "ai" },
+
+  { image: "q11.png", caption: "A map app guessing how much traffic there will be", answer: "ai" },
+
+  { image: "q12.png", caption: "An electric fan turned on with a switch", answer: "not_ai" },
+
+  { image: "q13.png", caption: "A ruler measuring the length of a book", answer: "not_ai" },
+
+  { image: "q14.jpg", caption: "A shopping app suggesting things to buy", answer: "ai" },
+
+  { image: "q15.png", caption: "A voice assistant understanding what you say", answer: "ai" }
+];
+
+  var TOTAL_Q = QUESTIONS.length;
+
+  /* ---------------- STATE ---------------- */
+  var state = {
+    muted: false,
+    currentIndex: 0,
+    firstAttemptCorrect: 0,   // used as the exam score
+    wrongAttempts: 0,
+    answeredFirstTryThisQ: null, // true/false once first attempt made on current question
+    startTime: null,
+    endTime: null,
+  };
+
+  /* ---------------- SCREEN NAV ---------------- */
+  function showScreen(id){
+    var all = document.querySelectorAll(".screen");
+    for (var i=0;i<all.length;i++){ all[i].classList.remove("active"); }
+    document.getElementById(id).classList.add("active");
+  }
+
+  /* ---------------- SPEECH ---------------- */
+  var synth = window.speechSynthesis || null;
+
+  function speak(text){
+    if (state.muted || !synth) return;
+    try{
+      synth.cancel();
+      var utt = new SpeechSynthesisUtterance(text);
+      utt.rate = 0.85;
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
+      synth.speak(utt);
+    }catch(e){ /* speech not available; game still fully playable */ }
+  }
+
+  document.getElementById("muteBtn").addEventListener("click", function(){
+    state.muted = !state.muted;
+    this.textContent = state.muted ? "🔇" : "🔊";
+    this.setAttribute("aria-label", state.muted ? "Unmute audio" : "Mute audio");
+    if (state.muted && synth) synth.cancel();
+  });
+
+  /* ---------------- START SCREEN ---------------- */
+  document.getElementById("hearBtn").addEventListener("click", function(){
+    speak("Look at the picture. Think carefully. Is AI being used? Click AI or NOT AI.");
+  });
+
+  document.getElementById("startBtn").addEventListener("click", function(){
+    showScreen("screen-instructions");
+  });
+
+  /* ---------------- INSTRUCTIONS ---------------- */
+  document.getElementById("beginQuizBtn").addEventListener("click", function(){
+    resetGameState();
+    showScreen("screen-question");
+    loadQuestion(0);
+  });
+
+  /* ---------------- QUESTION LOGIC ---------------- */
+  function resetGameState(){
+    state.currentIndex = 0;
+    state.firstAttemptCorrect = 0;
+    state.wrongAttempts = 0;
+    state.answeredFirstTryThisQ = null;
+    state.startTime = Date.now();
+    state.endTime = null;
+  }
+
+  function loadQuestion(index){ 
+    state.currentIndex = index; 
+    state.answeredFirstTryThisQ = null; 
+    var q = QUESTIONS[index]; 
+
+    document.getElementById("sceneVisual").innerHTML =
+        '<img class="scene-image" src="' + q.image + '" alt="">';
+
+    document.getElementById("sceneCaption").textContent = q.caption; 
+    document.getElementById("progressLabel").textContent = (index + 1) + "/" + TOTAL_Q; 
+    document.getElementById("progressFill").style.width =
+        (((index) / TOTAL_Q) * 100) + "%"; 
+
+    enableAnswerButtons(true); 
+
+    speak(q.caption + ". Is AI being used here?");
+  }
+
+  function enableAnswerButtons(enabled){
+    document.getElementById("btnAI").disabled = !enabled;
+    document.getElementById("btnNotAI").disabled = !enabled;
+  }
+
+  function handleAnswer(userAnswer){
+    var q = QUESTIONS[state.currentIndex];
+    var isCorrect = (userAnswer === q.answer);
+
+    if (state.answeredFirstTryThisQ === null){
+      state.answeredFirstTryThisQ = isCorrect;
+      if (isCorrect) state.firstAttemptCorrect++;
+    }
+
+    if (isCorrect){
+      showFeedback(true);
+      speak("Correct!");
+      enableAnswerButtons(false);
+      setTimeout(function(){
+        var next = state.currentIndex + 1;
+        if (next < TOTAL_Q){
+          loadQuestion(next);
+        } else {
+          finishGame();
+        }
+      }, 1100);
+    } else {
+      state.wrongAttempts++;
+      showFeedback(false);
+      speak("Try again.");
+      // allow immediate retry, buttons stay enabled
+    }
+  }
+
+  document.getElementById("btnAI").addEventListener("click", function(){ handleAnswer("ai"); });
+  document.getElementById("btnNotAI").addEventListener("click", function(){ handleAnswer("not_ai"); });
+  document.getElementById("speakQBtn").addEventListener("click", function(){
+    speak("Is AI being used here?");
+  });
+
+  function showFeedback(good){
+    var banner = document.getElementById("feedbackBanner");
+    banner.className = "feedback-banner show " + (good ? "good" : "bad");
+    banner.textContent = good ? "✅ Correct!" : "❌ Try Again!";
+    setTimeout(function(){
+      banner.classList.remove("show");
+    }, good ? 1000 : 900);
+  }
+
+  /* ---------------- FINISH / SCORE ---------------- */
+  function finishGame(){
+    state.endTime = Date.now();
+    document.getElementById("progressFill").style.width = "100%";
+
+    var score = state.firstAttemptCorrect;
+    var timeSec = Math.round((state.endTime - state.startTime)/1000);
+    var timeStr = formatTime(timeSec);
+    showScreen("screen-score");
+
+    if (score >= Math.round(TOTAL_Q * 0.8)){
+      launchConfetti();
+      speak("Great job! Well done.");
+    } else {
+      speak("Well done for finishing!");
+    }
+  }
+
+  function formatTime(totalSeconds){
+    var m = Math.floor(totalSeconds/60);
+    var s = totalSeconds % 60;
+    return (m>0 ? (m + "m ") : "") + s + "s";
+  }
+
+  function starsFor(score){
+    var ratio = score / TOTAL_Q;
+    var filled;
+    if (ratio >= 0.86) filled = 5;
+    else if (ratio >= 0.66) filled = 4;
+    else if (ratio >= 0.46) filled = 3;
+    else if (ratio >= 0.26) filled = 2;
+    else filled = 1;
+    var out = "";
+    for (var i=0;i<5;i++){ out += (i < filled) ? "⭐" : "☆"; }
+    return out;
+  }
+
+  document.getElementById("playAgainBtn").addEventListener("click", function(){
+    showScreen("screen-instructions");
+  });
+
+  document.getElementById("exitBtn").addEventListener("click", function(){
+    showScreen("screen-start");
+  });
+
+  /* ---------------- CONFETTI ---------------- */
+  function launchConfetti(){
+    var colors = ["#17B8A6","#F5A623","#3FB68C","#FFD873","#E0575B"];
+    for (var i=0;i<60;i++){
+      (function(){
+        var piece = document.createElement("div");
+        piece.className = "confetti-piece";
+        piece.style.left = (Math.random()*100) + "vw";
+        piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+        var duration = 2.2 + Math.random()*1.6;
+        piece.style.animationDuration = duration + "s";
+        piece.style.animationDelay = (Math.random()*0.4) + "s";
+        document.body.appendChild(piece);
+        setTimeout(function(){ piece.remove(); }, (duration+0.5)*1000);
+      })();
+    }
+  }
+
+
+})();
+</script>
+</body>
+</html>
